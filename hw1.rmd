@@ -1,5 +1,5 @@
 ---
-title: "DEMG609: Homework 1"
+title: "DEMG609: Problem Set 1"
 author: "Nick Graetz"
 date: "September 13, 2017"
 output: pdf_document
@@ -11,7 +11,7 @@ library(knitr)
 library(data.table)
 library(ggplot2)
 options(scipen=999)
-opts_chunk$set(fig.align='center', tidy=TRUE, tidy.opts=list(blank=TRUE, width.cutoff=40), warning=FALSE,message=FALSE)
+#opts_chunk$set(fig.align='center', tidy=TRUE, tidy.opts=list(blank=TRUE, width.cutoff=40), warning=FALSE,message=FALSE)
 ```
 
 \large
@@ -66,8 +66,8 @@ answer_1c <- py
 
 \small
 ```{r, echo=TRUE, eval=TRUE}
-## What was the population size in the middle of the intercensual period?
-## Given that growth rate is constant...
+# What was the population size in the middle of the intercensual period?
+# Given that growth rate is constant...
 pop_at_t <- function(t) {
   new_pop <- N_t1 * exp(r_star * t)
   return(new_pop)
@@ -108,13 +108,17 @@ ggplot(data = growth) +
 **Answer:**  
 Linear PY: $`r py_linear`$  
 Exp PY: $`r py`$  
-Difference: $`r py_linear - py`$  
+Difference (Linear - Exp): $`r py_linear - py`$  
+
+When $N_t$ follow an exponential growth pattern, $N_\frac{T}{2} * T$ will underestimate person-years lived during the period.
 
 \vspace{12pt}
 2.(a)
 \linebreak
 
 **Answer:** $`r r_star`$  
+
+Even though the instantaneous growth rate varies over the period, we must estimate it as the mean annualized growth rate over the period and assume the instantaneous rate is constant. This is a logistical assumption, as we can never measure the actual instantaneous growth rate continuously over the entire period.  
 
 \vspace{12pt}
 3.(a) 
@@ -166,6 +170,11 @@ Given that $N_0$ and $N_t$ and the assumption of constant $r$ between $N_0$ and 
 $$N_t = N_0e^{\frac{ln\biggl(\frac{N_t}{N_0}\biggr)}{T}T}$$
 \vspace{12pt}
 $$N_t = N_0e^{ln\biggl(\frac{N_t}{N_0}\biggr)}$$
+\vspace{12pt}
+\large
+
+At this point, we have an equation that does not contain $r$ or $T$, only $N_t$ and $N_0$. Below, reducing to make sure formula still internally consistent.  
+
 \vspace{12pt}
 $$N_t = N_0 * \frac{N_t}{N_0}$$
 \vspace{12pt}
@@ -232,8 +241,7 @@ answer_4b <- r_j_cont
 **Answer:** $`r answer_4b`$ 
 
 \vspace{12pt}
-4.(B) 
-\linebreak
+(B) 
 
 \small
 ```{r, echo=TRUE, eval=TRUE}
@@ -246,8 +254,7 @@ answer_4B <- halving_time
 **Answer:** $`r answer_4B`$ 
 
 \vspace{12pt}
-4.(C) 
-\linebreak
+(C) 
 
 \small
 ```{r, echo=TRUE, eval=TRUE}
@@ -277,7 +284,7 @@ ratio_growth_rate == (r_star_urban - r_star_rural)
 ```
 \large
 
-**Answer:**  
+**Example given my previously defined functions and arbitrary starting values:**  
 Urban growth rate: $`r r_star_urban`$  
 Rural growth rate: $`r r_star_rural`$  
 Difference in growth rates: $`r r_star_urban - r_star_rural`$  
