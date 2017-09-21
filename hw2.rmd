@@ -1,0 +1,138 @@
+---
+title: "DEMG609: Problem Set 2"
+author: "Nick Graetz"
+date: "September 20, 2017"
+output: pdf_document
+---
+  
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+# Load knitr package and settings
+library(knitr)
+library(data.table)
+library(ggplot2)
+library(formatR)
+options(scipen=999)
+#opts_chunk$set(fig.align='center', tidy=TRUE, tidy.opts=list(blank=TRUE, width.cutoff=40), warning=FALSE,message=FALSE)
+#opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
+```
+
+\large
+A.(1) 
+\vspace{12pt}
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+# Load data.
+data <- fread("C:/Users/ngraetz/Documents/repos/demg609/hw2_data.csv")
+data[, pop := as.numeric(pop)]
+data[, deaths := as.numeric(deaths)]
+
+# Calculate CDR.
+cdr_usa <- sum(data[country == "USA", deaths]) / sum(data[country == "USA", pop])
+cdr_russia <- sum(data[country == "Russia", deaths]) / sum(data[country == "Russia", pop])
+```
+\large
+
+**Answer:**  
+USA: `r cdr_usa`  
+Russia: `r cdr_russia`  
+
+\vspace{12pt}
+A.(2) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+data[, asdr := deaths / pop]
+
+ggplot(data = data) +
+  geom_line(aes(x = age_start,
+                y = log(asdr),
+                color = country),
+            size = 1) +
+  theme_classic()
+```
+\large
+
+\vspace{12pt}
+A.(3) 
+\linebreak
+We have to make a linear assumption as we only have midpoint populations.
+\linebreak
+
+\vspace{12pt}
+A.(4) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+data[country == "USA", age_prop := pop / sum(pop)]
+data[country == "Russia", age_prop := pop / sum(pop)]
+ggplot(data = data) +
+  geom_line(aes(x = age_start,
+                y = age_prop,
+                color = country),
+            size = 1) +
+  theme_classic()
+```
+\large
+
+\vspace{12pt}
+A.(5) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+cdr_usa_wt <- weighted.mean(data[country == "USA", asdr],
+                            data[country == "USA", age_prop])
+cdr_russia_wt <- weighted.mean(data[country == "Russia", asdr],
+                               data[country == "Russia", age_prop])
+cdr_usa_wt
+cdr_russia_wt
+```
+\large
+
+\vspace{12pt}
+A.(6) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+usa_ascdr <- weighted.mean(data[country == "USA", asdr],
+                           data[country == "Russia", age_prop])
+```
+\large
+
+**Answer:**  
+USA ASCDR: `r usa_ascdr`  
+The difference must be attributable to differences in the age-specific mortality rates between the US and Russia, as we have controlled for differences in the age-specific populations.
+
+\vspace{12pt}
+A.(7) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+# Calculate CMR.
+cmr <- sum(data[country == "Russia", deaths]) / sum(data[country == "USA", asdr] * data[country == "Russia", pop])
+cmr
+# Compare to ratio of Russia CDR and USA ASCDR.
+cdr_russia / usa_ascdr
+```
+\large
+
+\vspace{12pt}
+A.(8) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+c_age <- sum((data[country == "Russia", age_prop] - data[country == "USA", age_prop]) * 
+            ((data[country == "USA", asdr] + data[country == "Russia", asdr]) / 2)) 
+c_asdr <- sum((data[country == "Russia", asdr] - data[country == "USA", asdr]) * 
+             ((data[country == "USA", age_prop] + data[country == "Russia", age_prop]) / 2)) 
+# Calculate relative contributions to the net absolute difference.
+total_diff <- abs(c_age) + abs(c_asdr)
+abs(c_age)/total_diff
+abs(c_asdr)/total_diff
+```

@@ -10,8 +10,10 @@ output: pdf_document
 library(knitr)
 library(data.table)
 library(ggplot2)
+library(formatR)
 options(scipen=999)
 #opts_chunk$set(fig.align='center', tidy=TRUE, tidy.opts=list(blank=TRUE, width.cutoff=40), warning=FALSE,message=FALSE)
+#opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
 ```
 
 \large
@@ -85,7 +87,7 @@ answer_1d <- N_mid
 
 \small
 ```{r, echo=TRUE, eval=TRUE}
-## Given only midpoint population, we have to assume linear growth
+# Given only midpoint population, we have to assume linear growth
 py_linear <- N_mid * T
 
 growth <- data.table(T = seq(0,1,0.1),
@@ -126,7 +128,7 @@ Even though the instantaneous growth rate varies over the period, we must estima
 
 \small
 ```{r, echo=TRUE, eval=TRUE}
-## Instead of 2000.25 to 2010.25, it's now 2000.25 - 2010.08333
+# Instead of 2000.25 to 2010.25, it's now 2000.25 - 2010.08333
 N_t1 <- 281421906
 N_t2 <- 308745538
 t1 <- 2000.25
@@ -151,7 +153,7 @@ pop_at_t <- function(t, r_star, N_t1) {
 }
 N_mid <- pop_at_t(t = (T/2), r_star = r_star, N_t1 = N_t1)
 answer_3b <- N_mid
-## Bigger, because it has to get to the same end population faster
+# Bigger, because it has to get to the same end population faster
 ```
 \large
 
@@ -190,25 +192,25 @@ $$1 = 1$$
 
 \small
 ```{r, echo=TRUE, eval=TRUE}
-## Reset to initial pops and dates
+# Reset to initial pops and dates
 N_t1 <- 281421906
 N_t2 <- 308745538
 t1 <- 2000.25
 t2 <- 2010.25
 T <- t2 - t1
-## Inputs:
-##    j = number of times to compound per year
-##    year_interval = years in the period
-##    start_pop
-##    end_pop
-## Outputs:
-##    r_j = annual geometric growth rate
+# Inputs:
+#    j = number of times to compound per year
+#    year_interval = years in the period
+#    start_pop
+#    end_pop
+# Outputs:
+#    r_j = annual geometric growth rate
 calc_geo_r <- function(j, year_interval, start_pop, end_pop) {
   r_j <- j * ((end_pop / start_pop)^(1/(j*year_interval)) - 1)
   return(r_j)
 }
 
-## Apply function over j = 1, 12, 365 (annually, monthly, daily, continuously)
+# Apply function over j = 1, 12, 365 (annually, monthly, daily, continuously)
 geom_rates <- lapply(c(1,12,365,1000000),
                      calc_geo_r,
                      year_interval = T,
@@ -291,6 +293,7 @@ Difference in growth rates: $`r r_star_urban - r_star_rural`$
 Growth rate of urban/rural population ratio: $`r ratio_growth_rate`$  
 
 \large
+\vspace{12pt}
 
 **Analytic Answer:**  
 
