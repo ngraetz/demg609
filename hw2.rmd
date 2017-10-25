@@ -17,8 +17,64 @@ options(scipen=999)
 ```
 
 \large
-A.(1) 
+4.(a) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+# Reset to initial pops and dates
+N_t1 <- 281421906
+N_t2 <- 308745538
+t1 <- 2000.25
+t2 <- 2010.25
+T <- t2 - t1
+# Inputs:
+#    j = number of times to compound per year
+#    year_interval = years in the period
+#    start_pop
+#    end_pop
+# Outputs:
+#    r_j = annual geometric growth rate
+calc_geo_r <- function(j, year_interval, start_pop, end_pop) {
+  r_j <- j * ((end_pop / start_pop)^(1/(j*year_interval)) - 1)
+  return(r_j)
+}
+
+# Apply function over j = 1, 12, 365 (annually, monthly, daily, continuously)
+geom_rates <- lapply(c(1,12,365,1000000),
+                     calc_geo_r,
+                     year_interval = T,
+                     start_pop = N_t1,
+                     end_pop = N_t2)
+```
+\large
+
+**Answer:**  
+Annually: $`r geom_rates[[1]]`$  
+Monthly:  $`r geom_rates[[2]]`$  
+Daily:    $`r geom_rates[[3]]`$  
+Cont:     $`r geom_rates[[4]]`$  
+
 \vspace{12pt}
+4.(b) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+calc_geo_r_2 <- function(j, annual_rate) {
+  r_j <- j * ((1 + annual_rate)^(1/j) - 1)
+  return(r_j)
+}
+r_j_cont <- calc_geo_r_2(j = 1000000, annual_rate = geom_rates[[1]])
+answer_4b <- r_j_cont
+```
+\large
+
+**Answer:** $`r answer_4b`$ 
+
+\vspace{12pt}
+A.(1) 
+\linebreak
 
 \small
 ```{r, echo=TRUE, eval=TRUE}
@@ -48,7 +104,7 @@ data[, asdr := deaths / pop]
 ggplot(data = data) +
   geom_line(aes(x = age_start,
                 y = log(asdr),
-                color = country),
+                linetype = country),
             size = 1) +
   theme_classic()
 ```
@@ -71,7 +127,7 @@ data[country == "Russia", age_prop := pop / sum(pop)]
 ggplot(data = data) +
   geom_line(aes(x = age_start,
                 y = age_prop,
-                color = country),
+                linetype = country),
             size = 1) +
   theme_classic()
 ```
@@ -131,8 +187,21 @@ c_age <- sum((data[country == "Russia", age_prop] - data[country == "USA", age_p
             ((data[country == "USA", asdr] + data[country == "Russia", asdr]) / 2)) 
 c_asdr <- sum((data[country == "Russia", asdr] - data[country == "USA", asdr]) * 
              ((data[country == "USA", age_prop] + data[country == "Russia", age_prop]) / 2)) 
+c_age
+c_asdr
 # Calculate relative contributions to the net absolute difference.
 total_diff <- abs(c_age) + abs(c_asdr)
 abs(c_age)/total_diff
 abs(c_asdr)/total_diff
 ```
+\large
+
+**Answer:**    
+In comparing total mortality in the two countries, the negative component for differences (Russia - US) in age distributions implies that Russia's age structure has a net effect of decreasing the difference in total mortality controlling for differences in ASDRs. On the other hand, the positive component for differences in ASDRs implies that Russia's ASDRs have a net effect of increasing the difference in total mortality controlling for age structure.
+
+\vspace{12pt}
+A.(9) 
+\linebreak
+
+**Answer:**  
+Yes, the choice would have an effect. Adjusting the US ASDRs with Russia's age structure would have a net negative effect on the difference of mortality between the US and Russia, and vice versa. This is because the two factors (age composition and ASDR distribution) work in opposite directions between the two countries.

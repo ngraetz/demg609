@@ -1,0 +1,154 @@
+---
+title: "Midterm study guide"
+author: "Nick Graetz"
+date: "October 24, 2017"
+output:
+    pdf_document:
+        highlight: tango
+        fig_caption: true
+---
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+# Load knitr package and settings
+library(knitr)
+library(data.table)
+library(ggplot2)
+library(formatR)
+options(scipen=999)
+#opts_chunk$set(fig.align='center', tidy=TRUE, tidy.opts=list(blank=TRUE, width.cutoff=40), warning=FALSE,message=FALSE)
+#opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before)    par(mar=c(1,1,1,1)+.1)  # smaller margin on top and right
+})
+opts_chunk$set(small.mar=TRUE)
+```
+
+
+# Single decrement life table
+
+## Cohort
+
+$x = \text{age}$  
+
+$l_x = \text{survivors at exact age x}$  
+
+$_nd_x = \text{deaths between age x and x + n}$  
+
+$_nq_x = \text{probability of dying between age x and x + n}$  
+
+$_np_x = \text{probability of surviving from age x to x + n}$  
+
+$_nL_x = \text{person-years lived between age x and x + n}$  
+
+$T_x = \text{total person-years lived after exact age x}$  
+
+$e^0_x = \text{average years of life lived after exact age x (in this case, since birth)}$  
+
+$_nm_x = \text{mortality rate between ages x and x + n}$  
+
+$_nm_x$ to $_nq_x$ conversion:  
+
+$$_nq_x = \frac{n * {_nm_x}}{1 + (n - {_na_x}) * {_nm_x}}$$  
+
+* In a real cohort, $_na_x$ is known: average person-years lived by individuals who died between ages x and x + n
+
+## Period (synthetic cohort)  
+
+* Based on data for a specific period, $_nM_x = \frac{_nD_x}{_nN_x}$ 
+* Only need to assume one paramter to make conversion from $_nm_x$ to $_nq_x$: $_na_x = \frac{n}{2}$, usually 2.5
+  + Other methods: borrow from another population, graduation/iteration techniques, assume rate constant
+  
+1. **Assumption 1**: $_nM_x = _nm_x$, assume that a hypothetical cohort is to experience an observed set of period age-specific deaths rates.  
+
+2. **Assumption 2**: we have to make an estimate of $_na_x$, usually $\frac{n}{2}$. At the open-ended age group, $_na_x = \frac{1}{_nm_x}$.  
+
+3. Conversion: $_nq_x = \frac{n * _nm_x}{1 + (n - _na_x) * _nm_x}$. If we make the assumption that the age-specific death rate is constant from x to x + n, no $_na_x$ is required and $_np_x = 1 - {_nq_x} = e^{-n * {_nm_x}}$.  
+
+4. $_np_x = 1 - {_nq_x}$  
+
+5. $l_{x+n} = l_x * {_np_x}$ ($l_x$, $_nd_x$, $_nL_x$, and $_nT_x$ all vary in proportion to the radix and are unrelated to the population under study)
+
+6. $_nd_x = l_x - l_{x+n}$ (exits/decrements)  
+
+7. $_nL_x = n * l_{x+n} + {_na_x} * {_nd_x}$ (PY lived between x and x + n = PY by survivors + PY by decrements)  
+
+8. $T_x = \sum_{a=x}^{\infty} {_nL_a}$ (total PY lived after x)  
+
+9. $e^0_x = \frac{T_x}{l_x}$ (life expectancy = average PY lived by survivor at x after x)
+
+## Stationary population interpretation  
+
+Conditions (results of these conditions is that age structure is constant):  
+
+* Constant annual number of births
+* Constant mortality
+* Zero migration
+
+$_nL_x$ = PY lived between age x and x + n in a calendar year AND cohort AND number of people between age x and x + n at any given time  
+$T_0$ = total population size  
+$\text{CBR} = \text{CDR} = \frac{1}{e^0_0}$  
+$e^0_0$ = mean age at death  
+Death rate above age x = $\frac{l_x}{T_x} = \frac{1}{e^0_x}$  
+
+## Mortality as a continuous process
+The force of mortality is the derivative of the mortality rate: $\mu_x = \lim_{n\to0} {_nm_x}$  
+If $\mu_x$ is constant, you don't have to make any assumption about $_na_x$:  
+
+1. $\mu_x = {_nm_x} = {_nM_x}$  
+2. $l_{x+n} = l_x * e^{-n * \mu_x}$  
+3. $_np_x = e^{-n * {_nm_x}}$  
+4. $_nq_x = 1 - {_np_x}$  
+
+
+# Multiple decrement life tables  
+
+## Cohort  
+
+$_nd_x^{i} = \text{number of decrements from cause i between ages x and x + n}$  
+
+$_nq_x^{i} = \frac{_nd_x^{i}}{l_x} = \text{probability of decrement from cause i between ages x and x + n}$  
+
+$_nm_x^{i} = \frac{_nd_x^{i}}{_nL_x} = \text{rate of decrement from cause i between ages x and x + n}$  
+
+$l_x^{i} = \sum_{a=x}^{\infty} {_nd_a^{i}}$  
+
+$\sum_{i} {_nm_x^{i}} = _nm_x$  
+
+$\sum_{i} {_nq_x^{i}} = _nq_x$  
+
+
+## Period (synthetic cohort)
+
+$_nm_x^{i}$ to $_nq_x^{i}$ conversion:    
+$$_nq_x^{i} = \frac{n * {_nm_x^{i}}}{1 + (n - {_na_x}) * {_nm_x}}$$  
+
+$$_nq_x^{i} = \frac{n * {_nm_x^{i}}}{1 + (n - {_na_x}) * (_nm_x^{i} + _nm_x^{-i})}$$  
+
+$_nq_x^{i}$ is referred to as a "dependent probability" because if the mortality rates increase from other causes besides i ($_nm_x^{-i}$) between ages x and x + n, the probability of exiting from cause i will be lower (people who may have exited from cause i are exiting from other causes at higher rates).  
+
+Given the master life table $_nq_x^{i}$, total deaths ($_nD_x$), and deaths from cause i ($_nD_x^{i}$):  
+
+1. $_nq_x^{i} = {_nq_x} * \frac{_nD_x^{i}}{_nD_x}$ (if $\mu_x$ is given, use conversion above)  
+
+2. $_nd_x^{i} = {_nq_x^{i}} * {l_x}$  
+
+3. $l_x^{i} = \sum_{a=x}^{\infty} {_nd_a^{i}}$  
+
+4. $\frac{l_x^{i}}{l_x} = \text{probability that someone aged x will eventually exit from cause i}$  
+
+Given master $_nd_x$, total deaths ($_nD_x$), and deaths from cause i ($_nD_x^{i}$):  
+
+## Associated sinlge decrement life table (ASDLT)  
+
+${_n^*}{\text{p}}{_x^i}$ = probability of surviving from age x to x + n where only cause i is operating. You must make an assumption about $\mu_i$:
+
+1. $\mu_i$ is constant between x and x + n:  
+
+$${_n^*}{\text{p}}{_x^i} = e^{-n * {_nM_x^{i}}}$$  
+
+2. Assume $\mu_i$ is proportional to $\mu$ between x and x + n.
+
+$${_n^*}{\text{p}}{_x^i} = {_np_x}^{R^i} \ \ \text{where} \ R^{i} = \frac{_nD_x^{i}}{_nD_x}$$  
+
+${^*}{\text{l}}{_{x+n}^i} = {^*}{\text{l}}{_x^i} * {_n^*}{\text{p}}{_x^i}$  
+

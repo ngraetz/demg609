@@ -1,0 +1,347 @@
+---
+title: "DEMG609: Problem Set 4"
+author: "Nick Graetz"
+date: "October 11, 2017"
+output:
+    pdf_document:
+        highlight: tango
+        fig_caption: true
+---
+  
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+# Load knitr package and settings
+library(knitr)
+library(data.table)
+library(ggplot2)
+library(formatR)
+options(scipen=999)
+#opts_chunk$set(fig.align='center', tidy=TRUE, tidy.opts=list(blank=TRUE, width.cutoff=40), warning=FALSE,message=FALSE)
+#opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before)    par(mar=c(1,1,1,1)+.1)  # smaller margin on top and right
+})
+opts_chunk$set(small.mar=TRUE)
+```
+
+\large
+A.(10)
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+# Load data for problem set
+  raw_data <- fread("C:/Users/ngraetz/Documents/repos/demg609/hw3_data_clean.csv")
+  raw_data[, x := as.numeric(x)]
+  raw_data[, nNx := gsub(',','',nNx)]
+  raw_data[, nNx := as.numeric(nNx)]
+  raw_data[, nDx := gsub(',','',nDx)]
+  raw_data[, nDx := as.numeric(nDx)]
+
+####### calculate_life_table ###########################################
+### Define function that calculates complete life table given arguments:
+###   data = data.table with numeric columns:
+###                     x = beginning of age interval
+###                     nNx = total people reaching age interval
+###                     nDx = total deaths in age interval
+###   radix = numbers of survivors at age 0 (or births per year in a
+###           stationary population); defaults to 100000
+########################################################################
+calculate_life_table <- function(data, radix = 100000) {
+# 1. Calculate nmx
+  data[, nmx := nDx / nNx]
+
+# 2. Calculate nax given Coale and Demeny equations for ages <5 and n/2 for others.
+  # For 1a0
+  data[x == 0 & nmx >= .107, nax := 0.35]
+  data[x == 0 & nmx < .107, nax := 0.053 + (2.8 * nmx)]
+  # For 4a1
+  m0 <- data[x == 0, nmx]
+  data[x == 1 & shift(nmx, 1, type='lag') >= .107, nax := 1.361]
+  data[x == 1 & shift(nmx, 1, type='lag') < .107, nax := 1.522 - (1.518 * m0)]
+  # All other age groups
+  data[x > 1, nax := 5 / 2]
+  data[x == 85, nax := 1/nmx]
+
+# 3. Calculate nqx
+  data[x == 0, n := 1]
+  data[x == 1, n := 4]
+  data[x > 1, n := 5]
+  data[, nqx := (n * nmx) / (1 + ((n - nax) * nmx))]
+  data[x == 85, nqx := 1]
+  
+# 4. Calculate npx
+  data[, npx := 1 - nqx]
+  
+# 5. Calculate lx
+  data[, lx := radix]
+  for(r in 2:length(data[, lx])) {
+    previous_lx <- data[r-1, lx]
+    previous_npx <- data[r-1, npx]
+    data[r, lx := previous_lx * previous_npx]
+  }
+  
+# 6. Calculate ndx
+  for(r in 1:length(data[, lx])) {
+    lx_n <- data[r+1, lx]
+    data[r, ndx := lx - lx_n]
+    if(r == length(data[, lx])) data[r, ndx := lx]
+  }
+  
+# 7. Calculate nLx
+  for(r in 1:length(data[, lx])) {
+    lx_n <- data[r+1, lx]
+    data[r, nLx := (n * lx_n) + (nax * ndx)]
+    if(r == length(data[, lx])) data[r, nLx := lx / nmx]
+  }
+  
+# 8. Calculate Tx
+  for(r in 1:length(data[, lx])) {
+    data[r:length(data[, lx]), Tx := sum(nLx)]
+  }
+  
+# 9. Calculate ex
+  data[, ex := Tx / lx]
+
+# Return complete life table
+  return(data)
+  
+}
+
+# Calculate standard life table with data for problem set and default radix
+lt <- calculate_life_table(data = raw_data)
+
+# A.(10)
+  # CBR = CDR
+  # 1 / lt[1, ex]
+  
+  # Death rate above 60
+  # 1 / lt[x == 60, ex]
+  
+  # Mean age at death
+  # lt[1, ex]
+  
+  # Given 56,059 births per year in this population, how many people turn 65 each year?
+  stationary_lt <- calculate_life_table(data = copy(raw_data),
+                                        radix = 56059)
+  # stationary_lt[x == 65, lx]
+``` 
+\large
+
+**Answer:**  
+Because this is a stationary population the CDR = CBR = $\frac{1}{e^o_0}$ ($`r round(1 / lt[1, ex], 5)`$) and the crude growth rate is 0. The death rate above age 60 is $`r round(1 / lt[x == 60, ex], 5)`$. The mean age at death is $`r round(lt[1, ex], 2)`$. Assuming 56,059 births, $`r round(stationary_lt[x == 65, lx], 1)`$ reach their 65 birthday each year.  
+
+\large
+B.(1) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+# Set up mu and births (radix in stationary populations) for each race.
+mu_a <- .08
+l0_a <- 5000
+mu_b <- .10
+l0_b <- 10000
+
+# Life expectancies.
+e0_a <- 1/mu_a
+e0_b <- 1/mu_b
+```
+\large
+
+**Answer:**  
+Given this is a stationary population, $e^o_0 = \frac{1}{\mu}$.
+Life expectancy for A: $`r e0_a`$  
+Life expectancy for B: $`r e0_b`$  
+
+\vspace{12pt}
+B.(2) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+####### calculate_lt ###################################################
+### Define function that calculates complete life table for stationary population given arguments:
+###   data = data.table with numeric columns:
+###                     x = beginning of age interval
+###                     mu_var = name of variable defining force of mortality
+###                     radix_var = name of lx variable
+########################################################################
+calculate_lt <- function(data, mu_var, radix_var) {
+  
+  # 1. Calculate nmx
+  data[, nmx := get(mu_var)]
+  
+  # All other age groups
+  #data[, nax := 5 / 2]
+  
+  # 3. Calculate nqx
+  data[, n := 5]
+  #data[, nqx := (n * nmx) / (1 + ((n - nax) * nmx))]
+  #data[x == 100, nqx := 1]
+  
+  # 4. Calculate npx
+  #data[, npx := 1 - nqx]
+  data[, npx := exp(1)^(-n*nmx)]
+  data[, nqx := 1 - npx]
+  data[x == 100, nqx := 1]
+  
+  # 5. Calculate lx
+  data[, lx := get(radix_var)]
+  for(r in 2:length(data[, lx])) {
+    previous_lx <- data[r-1, lx]
+    previous_npx <- data[r-1, npx]
+    data[r, lx := previous_lx * previous_npx]
+  }
+  
+  # 6. Calculate ndx
+  for(r in 1:length(data[, lx])) {
+    lx_n <- data[r+1, lx]
+    data[r, ndx := lx - lx_n]
+    if(r == length(data[, lx])) data[r, ndx := lx]
+  }
+  
+  # 7. Calculate nLx
+  for(r in 1:length(data[, lx])) {
+    lx_n <- data[r+1, lx]
+    # data[r, nLx := (n * lx_n) + (nax * ndx)]
+    # if(r == length(data[, lx])) data[r, nLx := lx / nmx]
+    data[r, nLx := (lx - lx_n) / nmx]
+    if(r == length(data[, lx])) data[r, nLx := lx / nmx]
+  }
+  
+  # 8. Calculate Tx
+  for(r in 1:length(data[, lx])) {
+    data[r:length(data[, lx])-1, Tx := sum(nLx)]
+  }
+  
+  # 9. Calculate ex
+  data[, ex := Tx / lx]
+  
+  # Don't worry about upper age group
+  data <- data[x != 100, ]
+  
+  return(data)
+  
+}
+
+lt <- data.table(x = seq(0, 100, 5),
+                 mu_a = rep(mu_a, 21),
+                 mu_b = rep(mu_b, 21))
+
+# Construct life table for each race using force of mortality as nmx.
+lt_a <- calculate_lt(data = copy(lt), mu_var = 'mu_a', radix_var = 'l0_a')
+lt_b <- calculate_lt(data = copy(lt), mu_var = 'mu_b', radix_var = 'l0_b')
+
+# Make table to compare people reaching x birthday in each race.
+birthdays <- data.table(x = seq(0, 95, 5),
+                        Race_A = lt_a[, lx],
+                        Race_B = lt_b[, lx])
+```
+\large
+
+**Answer:**  
+```{r, echo=FALSE, results='asis'}
+kable(birthdays, caption = 'Individuals reaching each birthday by race', digits = 2)
+```
+
+\vspace{12pt}
+B.(3) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+lt_a[, asdr := ndx / nLx]
+lt_a[, table := 'Race A']
+lt_b[, asdr := ndx / nLx]
+lt_b[, table := 'Race B']
+combined_lt <- data.table(x = seq(0, 95, 5),
+                          nNx = lt_a[, nLx] + lt_b[, nLx],
+                          nDx = lt_a[, ndx] + lt_b[, ndx])
+combined_lt[, nLx := nNx]
+combined_lt[, asdr := nDx / nNx]
+combined_lt[, table := 'Race A + B']
+combined_lt <- rbind(combined_lt, lt_a, lt_b, fill = TRUE)
+```
+\large
+
+**Answer:**  
+```{r, echo=FALSE, results='asis'}
+nNx_table <- data.table(x = seq(0, 95, 5),
+                        'Race A population' = lt_a[, nLx],
+                        'Race A deaths' = lt_a[, ndx],
+                        'Race B population' = lt_b[, nLx],
+                        'Race B deaths' = lt_b[, ndx])
+kable(nNx_table, caption = 'Age distribution and deaths by race', digits = 2)
+```
+
+\vspace{12pt}
+B.(4) 
+\linebreak
+
+**Answer:**  
+```{r, echo=FALSE, results='asis'}
+combined_table <- data.table(x = seq(0, 95, 5),
+                            'Population' = combined_lt[table == 'Race A + B', nLx],
+                            'Deaths' = combined_lt[table == 'Race A + B', nDx],
+                            'ASDR' = combined_lt[table == 'Race A + B', asdr])
+kable(combined_table, caption = 'Age distribution and deaths, races combined', digits = c(0,2,2,5))
+```
+
+\vspace{12pt}
+B.(5) 
+\linebreak
+
+**Answer:**  
+$$\text{ASDR}_{AB} = \frac{(\text{ASDR}_{A} * \text{nNx}_{A}) + (\text{ASDR}_{B} * \text{nNx}_{B})}{\text{nNx}_{A} + \text{nNx}_{B}}$$
+
+$$\frac{\text{nDx}_{A} + \text{nDx}_{B}}{\text{nNx}_{A} + \text{nNx}_{B}} = \frac{(\frac{\text{nDx}_{A}}{\text{nNx}_{A}} * \text{nNx}_{A}) + (\frac{\text{nDx}_{B}}{\text{nNx}_{B}} * \text{nNx}_{B})}{\text{nNx}_{A} + \text{nNx}_{B}}$$
+
+$$\frac{\text{nDx}_{A} + \text{nDx}_{B}}{\text{nNx}_{A} + \text{nNx}_{B}} = \frac{\text{nDx}_{A} + \text{nDx}_{B}}{\text{nNx}_{A} + \text{nNx}_{B}}$$
+
+\vspace{12pt}
+B.(6) 
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+# 6. Ratio of nNx in B is higher at first, but then drops and A becomes more influential in the combined calculation.
+# This is due to B starting with more people, but they die off faster than A.
+gg1 <- ggplot(data = combined_lt) +
+  geom_line(aes(x = x,
+                y = asdr,
+                linetype = table),
+            size = 1) +
+  theme_light()
+
+ab_compare <- data.table(x = seq(0, 95, 5),
+                         nNx_ratio = lt_b[, lx] / lt_a[, lx])
+gg2 <- ggplot(data = ab_compare) +
+  geom_line(aes(x = x,
+                y = nNx_ratio),
+            size = 1) + 
+  geom_hline(aes(yintercept = 1),
+             color = 'red',
+             size = 1) + 
+  theme_light()
+```
+
+\small
+```{r echo=FALSE,warning=FALSE,fig.width=8,fig.height=8,message=FALSE,fig.cap=c("Comparison of ASDRs by age and nNx ratio by age.")} 
+require(gridExtra)
+grid.arrange(gg1, gg2, ncol=2, nrow=1)
+```
+\large
+
+**Answer:**  
+As the plot on the left illustrates above, the ASDR is constant over age in both Race A and Race B, but the combined ASDR declines over age. As demonstrated in (5), this combined ASDR is a weighted average of the two separate ASDRs. This decline is due to the structure of the weights changing over age, i.e. the relative population distribution ($\text{nNx}_{A}$ and $\text{nNx}_{B}$ changing between the two races over age. At birth, there are twice as many people in Race B (10,000) as in group A (5,000). This ratio, $\frac{\text{nNx}_{B}}{\text{nNx}_{A}}$, over age is demonstrated in the plot on the right above. Starting immediately after birth, the relative contribution of Race B to the weighted average ASDR (via $\text{nNx}_{B}$) begins to decline because the force of mortality is greater in Race B (.10 per year) than Race A (.08 per year). Eventually, the population of Race B drops below the population of Race A somewhere between ages 30 and 35. At this point, the ASDR of Race A is more influential than the ASDR of Race B in the weighted average ASDR.   
+
+\vspace{12pt}
+B.(6) 
+\linebreak
+
+**Answer:**  
+She is technically correct that, when examined in aggregate, the rate of mortality in the population seems to decline over age. However, as we know Race A and Race B have completely stable mortality rates over age, this conclusion can be viewed as an example of an ecological fallacy. The combined mortality rate in the population declines entirely as a function of the relative population age distributions changing between the races (i.e., the relative structure of the weights changing over age in the weighted-average ASDR). I think this is a disturbing example for interpeting any mortality rate change and deciding if the conclusion is "right" or "wrong", as the researcher is always susceptible to the ecological fallacy and how they define their population of interest. In this case, we knew race to be a salient category in the population and subset our mortality analysis. However, if we didn't know "race" was important in this population (or whatever the important underlying stratification in a population may be), we might easily mistake a decline in ASDR as "true" when in fact it is simply an issue of not stratifying properly.
+
+
+
+

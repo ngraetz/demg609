@@ -1,0 +1,143 @@
+---
+title: "DEMG609: Problem Set 5"
+author: "Nick Graetz"
+date: "October 18, 2017"
+output:
+    pdf_document:
+        highlight: tango
+        fig_caption: true
+---
+  
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+# Load knitr package and settings
+library(knitr)
+library(data.table)
+library(ggplot2)
+library(formatR)
+options(scipen=999)
+#opts_chunk$set(fig.align='center', tidy=TRUE, tidy.opts=list(blank=TRUE, width.cutoff=40), warning=FALSE,message=FALSE)
+#opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before)    par(mar=c(1,1,1,1)+.1)  # smaller margin on top and right
+})
+opts_chunk$set(small.mar=TRUE)
+```
+
+\large
+
+**A.(1)**  
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+data <- fread("C:/Users/ngraetz/Documents/repos/demg609/hw4_data_clean.csv")
+setnames(data, 'nDx i', 'nDx_i')
+
+# 1. Calculate multiple decrement life table for period.
+
+# Calculate npx from lx 
+  for(r in 1:length(data[, lx])) {
+    lx_n <- data[r+1, lx]
+    data[r, npx := lx_n / lx]
+    if(r == length(data[, lx])) data[r, npx := 0]
+  }
+  data[, nqx := 1 - npx]
+
+# Calculate nqx_i
+  data[, nqx_i := nqx * (nDx_i / nDx)]
+
+# Calculate ndx_i
+  data[, ndx_i := nqx_i * lx]
+
+# Calculate lx_i
+  for(r in 1:length(data[, ndx_i])) {
+    data[r:length(data[, ndx_i]), lx_i := sum(ndx_i)]
+  }
+
+# Calculate ndx
+  for(r in 1:length(data[, lx])) {
+    lx_n <- data[r+1, lx]
+    data[r, ndx := lx - lx_n]
+    if(r == length(data[, lx])) data[r, ndx := lx]
+  }
+
+# Calculate the probability that someone aged x will eventually exit from cause i
+  data[, p_i := lx_i / lx]
+  
+  lt <- data
+```
+
+**Answer:**  
+```{r, echo=FALSE, results='asis'}
+kable(lt, digits = c(0,0,0,0,5,5,5,0,0,0,5))
+```
+
+\large
+
+**A.(2)**
+\linebreak
+
+**Answer:**  
+Fraction of newborns who will die from accidents: $`r lt[x == 0, p_i]`$
+Fraction of those who survive to 50 who will die from accidents: $`r lt[x == 50, p_i]`$
+
+\large
+
+**A.(3)**
+\linebreak
+
+\small
+```{r, echo=TRUE, eval=TRUE}
+# 3. 
+  lt[, R_i := (nDx - nDx_i) / nDx]
+  lt[, npx_minus_i := npx^R_i]
+```
+
+**Answer:**  
+```{r, echo=FALSE, results='asis'}
+kable(lt, digits = c(0,0,0,0,5,5,5,0,0,0,5,2,5))
+```
+
+\large
+\vspace{12pt}
+
+**A.(4)**  
+
+Survivorship has increased by a factor of $`r prod(lt[x < 85, npx_minus_i]) / prod(lt[x < 85, npx])`$ by deleting mortality from accidents. An individual is ~5% more likely to survive to 85 if there were no accidents, relative to the master life table that includes accidents (absolute difference in mortality rates is only ~1%). This can't be interpreted in terms of surviving to 85 if the only cause of death was accidents. We would need to calculate ${^*}{\text{l}}{_x^\text{accidents}}$ (mortality from only accidents) vs. mortality from everything except accidents.  
+
+\vspace{24pt}
+**B.(1)**
+
+Given dependent probabilities (marriage or death are the only ways individuals may exit the cohort),  
+
+$${_n}{\text{q}}{_x^i} = \frac{n * {_n}{\text{M}}{_x^i}}{1 + (n - {_n}{\text{a}}{_x}) * ({_n}{\text{M}}{_x^i} + {_n}{\text{M}}{_x^{-i}})}$$
+
+$$P(\text{Never married at 50)} = \prod_{x=0}^{45} (1 - {_5}{\text{q}}{_x^M}) \ \text{where x = 0,5,10,...,45}$$
+
+$$\text{And where} \ {_5}{\text{q}}{_x^M} = \frac{5 * {_5}{\text{M}}{_x^M}}{1 + (5 - 2.5) * ({_5}{\text{M}}{_x^M} + {_5}{\text{M}}{_x^{D}})}$$
+
+\vspace{24pt}
+**B.(2)**  
+
+$$\qquad{_n^*}{\text{p}}{_x^i} = e^{-n * {_n}{\text{M}}{_x^i}}$$
+
+$$P(\text{Never married at 50, net of D)} =\prod_{x=0}^{45} e^{-5 * {_5}{\text{M}}{_x^M}} \ \ \ \ \text{where x = 0,5,10,...,45}$$
+
+\vspace{24pt}
+**B.(3)**  
+
+Reducing the mortality rate by 20% only decreases our denominator for the first expression, implying a higher probability of first marriage. This means that the probability of never married at 50 will be smaller than the first cohort.  
+
+$$P(\text{Never married at 50)} = \prod_{x=0}^{45} (1 - {_5}{\text{q}}{_x^M}) \ \text{where x = 0,5,10,...,45}$$
+
+$$\text{And where} \ {_5}{\text{q}}{_x^M} = \frac{5 * {_5}{\text{M}}{_x^M}}{1 + (5 - 2.5) * ({_5}{\text{M}}{_x^M} + 0.8({_5}{\text{M}}{_x^{D}}))}$$
+
+Our second expression, the probability of being never married at 50 net of mortality, will remain unchanged.  
+
+$$P(\text{Never married at 50, net of D)} =\prod_{x=0}^{45} e^{-5 * {_5}{\text{M}}{_x^M}} \ \ \ \ \text{where x = 0,5,10,...,45}$$
+
+\vspace{24pt}
+**B.(4)**  
+
+Examined in aggregate, one would conclude that rates of first marriage are stable over time and perhaps further conclude that the probability of first marriage is also stable. However, there is a trend of decreasing mortality rates of never-married individuals over time as well. This trend coupled with stable rates of first marriage implies that the probability of first marriage is actually increasing over age (given expression (1) above). 
+
